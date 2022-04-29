@@ -8,7 +8,7 @@ struct datastorage
     int distance;
 };
 
-class MinHeap // MaxHeap
+class MinHeap // MinHeap
 {
 private:
     int capacity;
@@ -58,7 +58,7 @@ void MinHeap ::heap_insert(int index, int distance)
 void MinHeap ::bubble_up(int position)
 {
     int i = position;
-    while (i > 0 && harr[i].distance <= harr[parent(i)].distance) // Maxheap logic
+    while (i > 0 && harr[i].distance <= harr[parent(i)].distance) // Minheap logic
     {
         int temp = harr[parent(i)].distance;
         int temp_index = harr[parent(i)].index; // Permutation
@@ -119,12 +119,12 @@ int *MinHeap ::heap_extract()
     return output;
 }
 
-void MinHeap ::heap_update(int index, int distance)
+void MinHeap ::heap_update(int index, int distance) // updates the heap
 {
     bool is_find = false;
     for (int i = 0; i < capacity; i++)
     {
-        if (harr->index == index)
+        if (harr->index == index) // checks if the node already exists
         {
             harr->distance = distance;
             is_find = true;
@@ -133,21 +133,21 @@ void MinHeap ::heap_update(int index, int distance)
     }
     if (is_find == false)
     {
-        heap_insert(index, distance);
+        heap_insert(index, distance); // if not -> insert
     }
 }
 // ------------------------------------------------------------------
 
 int const infinity = 2147483647;
 
-struct Node_detail
+struct Node_detail // Node detail
 {
-    int velocity;
+    int velocity = 0;
     bool is_conected = false;
     int cost;
 };
 
-struct Output_detail
+struct Output_detail // Output specifications
 {
     int time_to_dr = 0;
     int conections_to_dr = 0;
@@ -161,125 +161,128 @@ private:
 
 public:
     Output_detail *out_table;
-    int *weight_arr;
+
+    int *weight_arr; // used in the djkistra algorithm
     int *predecessor_arr;
 
-    Node_detail **velocity_table;
+    Node_detail **node_table;
 
-    Database(int Num_node, int DR);
+    Database(int Num_node, int DR); // constructor
 
-    void get_data(int line, int node, int conection_velocity);
+    void get_data(int line, int node, int conection_velocity); // gets the input
 
-    void dijkstra();
+    void dijkstra(); // executes the algorithm
 
-    void get_path_to_dr(int starter, int msg_size);
+    void get_path_to_dr(int starter, int msg_size); // get the path to the designated router
 
-    void make_output(int starter, int receiver, int msg_size);
-
+    void make_output(int starter, int receiver, int msg_size); // creates the output
 };
 
 Database ::Database(int Num_node, int DR)
 {
 
     num_node = Num_node;
-    velocity_table = new Node_detail *[Num_node];
-    out_table = new Output_detail[Num_node];
+    node_table = new Node_detail *[Num_node];
+    out_table = new Output_detail[Num_node]; // creates a table
     for (int i = 0; i < Num_node; i++)
     {
-        velocity_table[i] = new Node_detail[Num_node];
+        node_table[i] = new Node_detail[Num_node];
     }
 
     designated_router = DR;
 }
 
-void Database ::get_data(int line, int node, int conection_velocity)
+void Database ::get_data(int line, int node, int conection_velocity) // inserts the data
 {
-    int cost = (int)(1 << 20) / conection_velocity;
-    velocity_table[line][node].velocity = conection_velocity;
-    velocity_table[line][node].is_conected = true;
-    velocity_table[line][node].cost = cost;
+    int cost = (int)(1 << 20) / conection_velocity; // cost's formula
+    node_table[line][node].velocity = conection_velocity;
+    node_table[line][node].is_conected = true; // since there is an edge, there is a conection
+    node_table[line][node].cost = cost;
 }
 
 void Database ::dijkstra()
 {
-    int *D = new int[num_node];
-    int *F = new int[num_node];
+    int *D = new int[num_node]; // Distance array
+    int *F = new int[num_node]; // Predecessor array
     for (int i = 0; i < num_node; i++)
     {
-        D[i] = infinity;
+        D[i] = infinity; // standard values
         F[i] = -1;
     }
-    D[designated_router] = 0;
-    MinHeap C(num_node);
+
+    D[designated_router] = 0; // distance from the DR to the DR
+    MinHeap C(num_node);      // creates the min heap
     C.heap_insert(designated_router, 0);
 
     for (int i = 0; i < num_node; i++)
     {
-        int *input = C.heap_extract();
-        int u = input[0]; // u == line
+        int *input = C.heap_extract(); // gets the minimum struct
+        int u = input[0];              // u == line
         int Du = input[1];
 
-        for (int z = 0; z < num_node; z++)
+        for (int z = 0; z < num_node; z++) // z == column
         {
-            if (velocity_table[u][z].is_conected)
+            if (node_table[u][z].is_conected) // checks inside the node table
             {
-                int weight = velocity_table[u][z].cost;
+                int weight = node_table[u][z].cost; // gets weight
 
-                if (Du + weight < D[z])
+                if (Du + weight < D[z]) // if the new path is smaller than the older one
                 {
                     D[z] = Du + weight;
                     F[z] = u;
-                    C.heap_update(z, D[z]);
+                    C.heap_update(z, D[z]); // updates the heap
                 }
             }
         }
     }
-    weight_arr = D;
+    weight_arr = D; // assign the weight and predecessor arrays into the class
     predecessor_arr = F;
 }
 
 void Database ::get_path_to_dr(int starter, int msg_size)
 {
     int i = starter;
-    int conection = 0, temp_time = 0, conections = 0;
-    while (i != designated_router)
+    int predecessor = 0, temp_time = 0, conections = 0;
+
+    while (i != designated_router) // while the path did not get to the DR
     {
         conections++;
-        conection = predecessor_arr[i];
-        temp_time += msg_size / velocity_table[i][conection].velocity;
-        
-        i = conection;
+
+        predecessor = predecessor_arr[i];
+        temp_time += (msg_size) / node_table[i][predecessor].velocity; // increases the time
+
+        i = predecessor;
     }
-    //cout <<starter << "--" <<conections << "--" << temp_time;
-    out_table[starter].conections_to_dr = conections;
+
+    out_table[starter].conections_to_dr = conections; // assigning values
     out_table[starter].time_to_dr = temp_time;
 }
 
-void Database ::make_output(int starter, int receiver, int msg_size){
-    if (out_table[starter].time_to_dr == 0){
-        get_path_to_dr(starter, msg_size);
-    }
-    if (out_table[receiver].time_to_dr ==0){
-        get_path_to_dr(receiver, msg_size);
-    }
-    
-    int total_time =  out_table[starter].time_to_dr + out_table[receiver].time_to_dr;
-    cout << out_table[starter].time_to_dr << "+" << out_table[receiver].time_to_dr << "=";
+void Database ::make_output(int starter, int receiver, int msg_size)
+{
+
+    get_path_to_dr(starter, msg_size); // get the number of conections and partial time
+
+    get_path_to_dr(receiver, msg_size);
+
+    int total_time = out_table[starter].time_to_dr + out_table[receiver].time_to_dr; // total time and conection
     int total_conections = out_table[starter].conections_to_dr + out_table[receiver].conections_to_dr;
-    cout << total_conections << " " << total_time << "\n";
+    
+    cout << total_conections << " " << total_time << "\n"; // output
 }
 
 int main()
 {
     int K, N, DR, M;
     string input_n, input_m;
-    cin >> K;
+    cin >> K; // number of cases
 
     for (int i = 0; i < K; i++)
     {
-        cin >> N;
-        cin >> DR;
-        Database database(N, DR);
+        cout << "caso " << i << ":" << endl;
+        cin >> N; // number of nodes
+        cin >> DR; // designated router
+        Database database(N, DR); // creates the table
 
         cin.ignore();
 
@@ -292,11 +295,11 @@ int main()
             {
                 cin >> node;
                 cin >> conection_velocity;
-                database.get_data(line, node, conection_velocity);
+                database.get_data(line, node, conection_velocity); // gets the input
             }
         }
 
-        database.dijkstra();
+        database.dijkstra(); // gets the shortest path
 
         cin >> M;
         cin.ignore();
@@ -306,7 +309,9 @@ int main()
             cin >> starter;
             cin >> receiver;
             cin >> msg_size;
-            database.make_output(starter, receiver, msg_size);
+
+            database.make_output(starter, receiver, msg_size); // generates the output
         }
+        cout << endl;
     }
 }
