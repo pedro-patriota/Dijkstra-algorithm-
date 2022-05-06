@@ -149,8 +149,8 @@ struct Node_detail // Node detail
 
 struct Output_detail // Output specifications
 {
-    int time_to_dr = 0;
     int conections_to_dr = 0;
+    int total_cost;
 };
 
 class Database
@@ -242,20 +242,20 @@ void Database ::dijkstra()
 void Database ::get_path_to_dr(int starter, int msg_size)
 {
     int i = starter;
-    int predecessor = 0, temp_time = 0, conections = 0;
+    int predecessor = 0, temp_time = 0, conections = 0, total_cost = 0;
 
     while (i != designated_router) // while the path did not get to the DR
     {
         conections++;
 
         predecessor = predecessor_arr[i];
-        temp_time += (msg_size) / node_table[i][predecessor].velocity; // increases the time
-
+        //temp_time += (msg_size) / node_table[i][predecessor].velocity; // increases the time
+        total_cost += node_table[i][predecessor].cost;
         i = predecessor;
     }
-
+  
     out_table[starter].conections_to_dr = conections; // assigning values
-    out_table[starter].time_to_dr = temp_time;
+    out_table[starter].total_cost = total_cost;
 }
 
 void Database ::make_output(int starter, int receiver, int msg_size)
@@ -265,9 +265,9 @@ void Database ::make_output(int starter, int receiver, int msg_size)
 
     get_path_to_dr(receiver, msg_size);
 
-    int total_time = out_table[starter].time_to_dr + out_table[receiver].time_to_dr; // total time and conection
+    int total_time = ((out_table[starter].total_cost + out_table[receiver].total_cost)*msg_size)/(1<<20); // total time and conection
     int total_conections = out_table[starter].conections_to_dr + out_table[receiver].conections_to_dr;
-    
+
     cout << total_conections << " " << total_time << "\n"; // output
 }
 
@@ -280,8 +280,8 @@ int main()
     for (int i = 0; i < K; i++)
     {
         cout << "caso " << i << ":" << endl;
-        cin >> N; // number of nodes
-        cin >> DR; // designated router
+        cin >> N;                 // number of nodes
+        cin >> DR;                // designated router
         Database database(N, DR); // creates the table
 
         cin.ignore();
